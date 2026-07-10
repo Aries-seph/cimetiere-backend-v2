@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["...", "gdal", "geos", "proj"]
+
+[phases.build]
+cmds = ["...", "echo 'GDAL est installé'"]
