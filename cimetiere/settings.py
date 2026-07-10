@@ -99,7 +99,7 @@ DATABASES = {
         'USER': os.getenv('DB_USER', 'postgres'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'PORT': os.getenv('DB_PORT', '8000'),
         'OPTIONS': {
             'sslmode': os.getenv('DB_SSLMODE', 'require'),
         }
