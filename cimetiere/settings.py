@@ -148,7 +148,7 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@cimetiere-v2.com')
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-
+EMAIL_TIMOUT=60
 
 # =============================================
 # CSRF ET CORS POUR RAILWAY
