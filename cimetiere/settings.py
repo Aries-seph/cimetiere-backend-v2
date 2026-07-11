@@ -32,7 +32,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ... le reste de ton settings.py inchangé ...
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 SECRET_KEY = os.getenv('SECRET_KEY')
 ALLOWED_HOSTS = ['*']
@@ -99,7 +98,7 @@ DATABASES = {
         'USER': os.getenv('DB_USER', 'postgres'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '8000'),
+        'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
             'sslmode': os.getenv('DB_SSLMODE', 'require'),
         }
@@ -182,7 +181,5 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Pour le développement
-if DEBUG:
-    CSRF_TRUSTED_ORIGINS.append('http://localhost:8000')
-    CORS_ALLOW_ALL_ORIGINS = True
+# Définir la variable DEBUG (False par défaut si non spécifié sur Railway)
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
