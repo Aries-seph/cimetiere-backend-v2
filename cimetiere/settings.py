@@ -10,21 +10,16 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-if 'RAILWAY' in os.environ:
-    # Chemins exacts sur Railway (via apt-get)
-    GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so.38'
-    GEOS_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgeos_c.so.3.12.1'
-    
-    os.environ['GDAL_DATA'] = '/usr/share/gdal/3.8'
-    os.environ['PROJ_LIB'] = '/usr/share/proj'
-else:
-    # Pour le développement local (Windows)
-    if sys.platform == 'win32':
-        gdal_path = r'C:\Program Files\GDAL'
-        os.environ['GDAL_DATA'] = os.path.join(gdal_path, 'gdal-data')
-        os.environ['PROJ_LIB'] = os.path.join(gdal_path, 'projlib')
-        GDAL_LIBRARY_PATH = os.path.join(gdal_path, 'gdal.dll')
-        GEOS_LIBRARY_PATH = os.path.join(gdal_path, 'geos_c.dll')
+os.environ.setdefault('GDAL_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/libgdal.so')
+os.environ.setdefault('GEOS_LIBRARY_PATH', '/usr/lib/x86_64-linux-gnu/libgeos_c.so')
+os.environ.setdefault('GDAL_DATA', '/usr/share/gdal')
+os.environ.setdefault('PROJ_LIB', '/usr/share/proj')
+
+# Si les variables sont définies, les utiliser
+if os.environ.get('GDAL_LIBRARY_PATH'):
+    GDAL_LIBRARY_PATH = os.environ['GDAL_LIBRARY_PATH']
+if os.environ.get('GEOS_LIBRARY_PATH'):
+    GEOS_LIBRARY_PATH = os.environ['GEOS_LIBRARY_PATH']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
