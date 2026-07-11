@@ -13,22 +13,10 @@ from django.utils import timezone
 from datetime import timedelta
 from typing import Dict, Any
 from cimetiere.brevo import send_mfa_code
+from cimetiere.brevo import send_brevo_email
 
 router = Router()
 auth = JWTAuth()
-
-
-def _send_mfa_code(user: User) -> MFACode:
-    """Génère et envoie un code MFA à l'utilisateur."""
-    mfa = MFACode.generate_for(user)
-    send_mail(
-        subject='Votre code de connexion',
-        message=f'Bonjour {user.username},\n\nVotre code de connexion est : {mfa.code}\n\nCe code expire dans 10 minutes.',
-        from_email='jeremykounkou@icloud.com',
-        recipient_list=[user.email],
-    )
-    return mfa
-
 
 @router.post("/register")
 def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
@@ -56,7 +44,6 @@ def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
 
 @router.post("/login")
 def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
-    """Authentification de l'utilisateur."""
     user = authenticate(
         request,
         username=data.email,
@@ -66,11 +53,23 @@ def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
     if not user:
         return {"success": False, "message": "Identifiants incorrects"}
     
-    # Générer le code MFA
     mfa = MFACode.generate_for(user)
     
-    # Envoyer l'email via Brevo
-    email_sent = send_mfa_code(user, mfa.code)
+    # Utiliser Brevo au lieu de Django SMTP
+    email_sent = send_brevo_email(
+        to_email=user.email,
+        subject='🔐 Votre code de connexion - Cimetière V2',
+        html_content=f"""
+        <h2>🔐 Connexion à Cimetière V2</h2>
+        <p>Bonjour <strong>{user.username}</strong>,</p>
+        <p>Voici votre code de vérification :</p>
+        <div style="font-size: 32px; font-weight: bold; color: #1A56DB; padding: 20px; background: #f0f4ff; border-radius: 8px;">
+            {mfa.code}
+        </div>
+        <p>Ce code expire dans <strong>10 minutes</strong>.</p>
+        <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+        """
+    )
     
     if not email_sent:
         return {
@@ -83,7 +82,6 @@ def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
         "mfa_required": True,
         "message": "Un code a été envoyé à votre adresse email"
     }
-
 
 @router.post("/verify-mfa")
 def verify_mfa_code(request, data: MFAVerifyRequestSchema) -> Dict[str, Any]:
