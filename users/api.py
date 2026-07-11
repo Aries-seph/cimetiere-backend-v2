@@ -12,6 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.utils import timezone
 from datetime import timedelta
 from typing import Dict, Any
+from cimetiere.brevo import send_mfa_code
 
 router = Router()
 auth = JWTAuth()
@@ -65,7 +66,17 @@ def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
     if not user:
         return {"success": False, "message": "Identifiants incorrects"}
     
-    _send_mfa_code(user)
+    # Générer le code MFA
+    mfa = MFACode.generate_for(user)
+    
+    # Envoyer l'email via Brevo
+    email_sent = send_mfa_code(user, mfa.code)
+    
+    if not email_sent:
+        return {
+            "success": False,
+            "message": "Erreur lors de l'envoi du code. Vérifiez votre email."
+        }
     
     return {
         "success": True,

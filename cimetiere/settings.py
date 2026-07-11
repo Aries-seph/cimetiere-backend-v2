@@ -138,13 +138,16 @@ REST_FRAMEWORK = {
 }
 
 # Email (Brevo)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# Désactiver le SMTP (on utilise l'API)
+EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'  
 EMAIL_HOST = 'smtp-relay.brevo.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+SECRET_KEY = os.getenv('SECRET_KEY')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@cimetiere-v2.com')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 
 
 # =============================================
