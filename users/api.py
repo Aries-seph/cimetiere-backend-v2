@@ -43,22 +43,18 @@ def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
 
 @router.post("/login")
 def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
-    """Authentification de l'utilisateur avec envoi du code MFA."""
-    
-    # 1. Authentifier l'utilisateur
-    user = authenticate(
-        request,
-        username=data.email,
-        password=data.password
-    )
-    
+    """
+    Authentification de l'utilisateur avec envoi du code MFA.
+    """
+    # 1. Authentifier l'utilisateur en utilisant les données du schéma JSON
+    user = authenticate(request, username=data.email, password=data.password)
     if not user:
         return {"success": False, "message": "Identifiants incorrects"}
-    
-    # 2. Générer le code MFA
+
+    # 2. Générer le code MFA (Utilise votre méthode de modèle existante)
     mfa = MFACode.generate_for(user)
-    
-    # 3. Envoyer le code par email via Brevo
+
+    # 3. Envoyer le code par email via l'API HTTP Brevo
     email_sent = send_brevo_email(
         to_email=user.email,
         subject='🔐 Votre code de connexion - Cimetière V2',
@@ -84,7 +80,6 @@ def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
                     <p>Voici votre code de vérification à usage unique :</p>
                     <div class="code">{mfa.code}</div>
                     <p>Ce code expire dans <strong>10 minutes</strong>.</p>
-                    <p>Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.</p>
                 </div>
                 <div class="footer">
                     <p>© 2026 Cimetière V2 - Application de gestion de cimetière</p>
@@ -94,19 +89,11 @@ def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
         </html>
         """
     )
-    
-    if not email_sent:
-        return {
-            "success": False,
-            "message": "Erreur lors de l'envoi du code. Vérifiez votre email."
-        }
-    
-    return {
-        "success": True,
-        "mfa_required": True,
-        "message": "Un code a été envoyé à votre adresse email"
-    }
 
+    if not email_sent:
+        return {"success": False, "message": "Erreur lors de l'envoi du code. Vérifiez votre email."}
+
+    return {"success": True, "mfa_required": True, "message": "Un code a été envoyé à votre adresse email"}
 
 @router.post("/verify-mfa")
 def verify_mfa_code(request, data: MFAVerifyRequestSchema) -> Dict[str, Any]:
