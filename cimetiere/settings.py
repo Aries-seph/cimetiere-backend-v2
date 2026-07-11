@@ -10,13 +10,15 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# CONFIGURATION GDAL POUR RAILWAY
-# =============================================
 if 'RAILWAY' in os.environ:
-    # Sur Railway, GDAL est installé via apt-get
+    # Sur Railway, GDAL est installé via apt
+    os.environ['GDAL_DATA'] = '/usr/share/gdal'
+    os.environ['PROJ_LIB'] = '/usr/share/proj'
+    
+    # Spécifier les chemins des bibliothèques
     GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'
     GEOS_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgeos_c.so'
-# ... le reste de ton settings.py inchangé ...
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
