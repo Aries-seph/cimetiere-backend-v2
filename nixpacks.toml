@@ -2,7 +2,8 @@
 python = {}
 
 [phases.setup]
-nixPkgs = ["python3", "gdal", "geos", "proj"]
+# Force l'installation des paquets de géolocalisation requis pour PostGIS sous Linux
+aptPkgs = ["gdal-bin", "libgdal-dev", "binutils", "libproj-dev", "g++"]
 
 [start]
 cmd = "gunicorn cimetiere.wsgi:application --bind 0.0.0.0:$PORT"
