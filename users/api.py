@@ -64,7 +64,7 @@ def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
     # 3. Envoyer l'email par l'API HTTP Brevo (Autorisé sur Railway)
     email_sent = send_brevo_email(
         to_email=user.email,
-        subject="🔐 Votre code de sécurité - Cimetière V2",
+        subject="🔐 Votre code de sécurité - Cimetière",
         html_content=f"""
         <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1A56DB;">Double authentification requise</h2>
