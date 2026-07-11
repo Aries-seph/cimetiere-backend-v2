@@ -1,4 +1,4 @@
-# users/api.py (extrait des endpoints principaux)
+# users/api.py
 from ninja import Router
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
@@ -13,7 +13,6 @@ from django.utils import timezone
 from datetime import timedelta
 from typing import Dict, Any
 from cimetiere.brevo import send_brevo_email
-import httpx
 
 router = Router()
 auth = JWTAuth()
@@ -41,21 +40,73 @@ def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
     
     return {"success": True, "message": "Compte créé avec succès"}
 
-# api_client.py
+
 @router.post("/login")
-def login(self, email, password):
-    try:
-        response = httpx.post(
-            f"{self.BASE_URL}/api/users/login",
-            json={"email": email, "password": password}
-        )
-        # On vérifie si la réponse est bien du JSON
-        return response.json()
-    except Exception as e:
+def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
+    """Authentification de l'utilisateur avec envoi du code MFA."""
+    
+    # 1. Authentifier l'utilisateur
+    user = authenticate(
+        request,
+        username=data.email,
+        password=data.password
+    )
+    
+    if not user:
+        return {"success": False, "message": "Identifiants incorrects"}
+    
+    # 2. Générer le code MFA
+    mfa = MFACode.generate_for(user)
+    
+    # 3. Envoyer le code par email via Brevo
+    email_sent = send_brevo_email(
+        to_email=user.email,
+        subject='🔐 Votre code de connexion - Cimetière V2',
+        html_content=f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff; border-radius: 8px; }}
+                .header {{ background: #1A56DB; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+                .code {{ font-size: 36px; font-weight: bold; color: #1A56DB; text-align: center; padding: 20px; background: #f0f4ff; border-radius: 8px; margin: 20px 0; }}
+                .footer {{ margin-top: 20px; font-size: 12px; color: #6B7280; text-align: center; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2>🔐 Connexion à Cimetière V2</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <p>Bonjour <strong>{user.username}</strong>,</p>
+                    <p>Voici votre code de vérification à usage unique :</p>
+                    <div class="code">{mfa.code}</div>
+                    <p>Ce code expire dans <strong>10 minutes</strong>.</p>
+                    <p>Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.</p>
+                </div>
+                <div class="footer">
+                    <p>© 2026 Cimetière V2 - Application de gestion de cimetière</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    )
+    
+    if not email_sent:
         return {
-            "success": False, 
-            "message": f"Le serveur a renvoyé une réponse invalide (HTML/Erreur 500)."
+            "success": False,
+            "message": "Erreur lors de l'envoi du code. Vérifiez votre email."
         }
+    
+    return {
+        "success": True,
+        "mfa_required": True,
+        "message": "Un code a été envoyé à votre adresse email"
+    }
+
 
 @router.post("/verify-mfa")
 def verify_mfa_code(request, data: MFAVerifyRequestSchema) -> Dict[str, Any]:
@@ -138,11 +189,16 @@ def update_current_user_profile(request, data: UserProfileUpdateSchema) -> Dict[
     admins = User.objects.filter(role="ADMIN").values_list("email", flat=True)
     
     if admins:
-        send_mail(
+        send_brevo_email(
+            to_email=list(admins)[0],
             subject="Modification de profil utilisateur",
-            message=f"L'utilisateur {user.username} ({user.email}) a modifié son profil :\n\n" + "\n".join(changes),
-            from_email='jeremykounkou@icloud.com',
-            recipient_list=list(admins),
+            html_content=f"""
+            <h2>Modification de profil</h2>
+            <p>L'utilisateur <strong>{user.username}</strong> ({user.email}) a modifié son profil :</p>
+            <ul>
+                {''.join([f'<li>{change}</li>' for change in changes])}
+            </ul>
+            """
         )
     
     return {"success": True, "message": "Profil mis à jour"}
