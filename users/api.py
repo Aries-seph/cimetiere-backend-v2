@@ -12,7 +12,6 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.utils import timezone
 from datetime import timedelta
 from typing import Dict, Any
-from cimetiere.brevo import send_mfa_code
 from cimetiere.brevo import send_brevo_email
 import httpx
 
