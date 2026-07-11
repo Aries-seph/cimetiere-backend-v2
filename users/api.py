@@ -42,10 +42,11 @@ def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
     return {"success": True, "message": "Compte créé avec succès"}
 
 # api_client.py
+@router.post("/login")
 def login(self, email, password):
     try:
         response = httpx.post(
-            f"{self.base_url}/api/users/login",
+            f"{self.BASE_URL}/api/users/login",
             json={"email": email, "password": password}
         )
         # On vérifie si la réponse est bien du JSON
