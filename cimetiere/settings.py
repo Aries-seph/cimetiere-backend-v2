@@ -7,29 +7,15 @@ from dotenv import load_dotenv
 # Charger les variables d'environnement
 load_dotenv()
 
-# =============================================
-# CONFIGURATION GDAL POUR WINDOWS
-# =============================================
-if sys.platform == 'win32':
-    gdal_path = r'C:\Program Files\GDAL'
-    if gdal_path not in os.environ.get('PATH', ''):
-        os.environ['PATH'] = gdal_path + ';' + os.environ.get('PATH', '')
-    os.environ['GDAL_DATA'] = os.path.join(gdal_path, 'gdal-data')
-    os.environ['PROJ_LIB'] = os.path.join(gdal_path, 'projlib')
-    GDAL_LIBRARY_PATH = os.path.join(gdal_path, 'gdal.dll')
-    GEOS_LIBRARY_PATH = os.path.join(gdal_path, 'geos_c.dll')
-else:
-    # Configuration pour Linux (Railway) au cas où les paquets binaires manquent
-    import ctypes
-    from django.core.exceptions import ImproperlyConfigured
-    try:
-        # Tente de trouver GDAL de manière standard sous Linux
-        os.environ['GDAL_DATA'] = '/usr/share/gdal'
-    except Exception:
-        pass
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# CONFIGURATION GDAL POUR RAILWAY
+# =============================================
+if 'RAILWAY' in os.environ:
+    # Sur Railway, GDAL est installé via apt-get
+    GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'
+    GEOS_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgeos_c.so'
 # ... le reste de ton settings.py inchangé ...
 
 # SECURITY WARNING: don't run with debug turned on in production!
