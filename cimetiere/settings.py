@@ -11,14 +11,20 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 if 'RAILWAY' in os.environ:
-    # Sur Railway, GDAL est installé via apt
-    os.environ['GDAL_DATA'] = '/usr/share/gdal'
-    os.environ['PROJ_LIB'] = '/usr/share/proj'
+    # Chemins exacts sur Railway (via apt-get)
+    GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so.38'
+    GEOS_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgeos_c.so.3.12.1'
     
-    # Spécifier les chemins des bibliothèques
-    GDAL_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgdal.so'
-    GEOS_LIBRARY_PATH = '/usr/lib/x86_64-linux-gnu/libgeos_c.so'
-
+    os.environ['GDAL_DATA'] = '/usr/share/gdal/3.8'
+    os.environ['PROJ_LIB'] = '/usr/share/proj'
+else:
+    # Pour le développement local (Windows)
+    if sys.platform == 'win32':
+        gdal_path = r'C:\Program Files\GDAL'
+        os.environ['GDAL_DATA'] = os.path.join(gdal_path, 'gdal-data')
+        os.environ['PROJ_LIB'] = os.path.join(gdal_path, 'projlib')
+        GDAL_LIBRARY_PATH = os.path.join(gdal_path, 'gdal.dll')
+        GEOS_LIBRARY_PATH = os.path.join(gdal_path, 'geos_c.dll')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')

@@ -1,3 +1,6 @@
 gdal-bin
 libgdal-dev
 python3-gdal
+libproj-dev
+proj-bin
+proj-data
