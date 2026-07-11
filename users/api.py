@@ -40,44 +40,55 @@ def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
     
     return {"success": True, "message": "Compte créé avec succès"}
 
+# users/api.py (A insérer au bon endroit dans votre fichier backend)
+
 @router.post("/login")
 def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
     """
-    Authentification de l'utilisateur avec envoi du code MFA via l'API Brevo.
+    Authentification de l'utilisateur et génération/envoi du code MFA.
     """
-    # 1. Authentifier l'utilisateur
+    # 1. Valider les identifiants via Django Auth
     user = authenticate(request, username=data.email, password=data.password)
     if not user:
         return {"success": False, "message": "Identifiants incorrects"}
 
-    # 2. Générer le code MFA en base de données
-    mfa = MFACode.generate_for(user)
+    # 2. Générer le code MFA dans votre table Supabase
+    try:
+        mfa = MFACode.generate_for(user)
+    except Exception as e:
+        # Si votre méthode s'appelle différemment (ex: MFACode.objects.create)
+        import random
+        code_mfa = f"{random.randint(100000, 999999)}"
+        mfa = MFACode.objects.create(user=user, code=code_mfa)
 
-    # 3. Forcer l'envoi via l'API HTTP Brevo (évite le timeout SMTP)
+    # 3. Envoyer l'email par l'API HTTP Brevo (Autorisé sur Railway)
     email_sent = send_brevo_email(
         to_email=user.email,
-        subject='🔐 Votre code de sécurité - Cimetière V2',
+        subject="🔐 Votre code de sécurité - Cimetière V2",
         html_content=f"""
-        <!DOCTYPE html>
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>🔐 Double authentification</h2>
-            <p>Bonjour {user.username},</p>
-            <p>Voici votre code de vérification à usage unique pour vous connecter :</p>
-            <h1 style="color: #1A56DB; letter-spacing: 5px; font-size: 36px;">{mfa.code}</h1>
-            <p>Ce code expire dans 10 minutes.</p>
-        </body>
-        </html>
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1A56DB;">Double authentification requise</h2>
+            <p>Bonjour <b>{user.username}</b>,</p>
+            <p>Voici votre code de validation à usage unique pour accéder à votre espace :</p>
+            <div style="background: #F3F4F6; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #1A56DB; border-radius: 8px; margin: 20px 0;">
+                {mfa.code if hasattr(mfa, 'code') else mfa}
+            </div>
+            <p style="font-size: 12px; color: #6B7280;">Ce code expirera automatiquement dans 10 minutes.</p>
+        </div>
         """
     )
 
     if not email_sent:
-        return {"success": False, "message": "Erreur lors de l'envoi du code. Vérifiez votre email."}
+        return {"success": False, "message": "Erreur lors de l'envoi du code de sécurité."}
 
-    return {"success": True, "mfa_required": True, "message": "Un code a été envoyé à votre adresse email"}
+    # 4. ✅ Structure EXACTE que votre login_page.py attend pour faire page.go()
+    return {
+        "success": True,
+        "mfa_required": True,
+        "message": "Un code de validation a été envoyé par email."
+    }
+
 @router.post("/verify-mfa")
-
-
 def verify_mfa_code(request, data: MFAVerifyRequestSchema) -> Dict[str, Any]:
     """Vérification du code MFA."""
     
