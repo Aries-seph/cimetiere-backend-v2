@@ -11,21 +11,22 @@ load_dotenv()
 # CONFIGURATION GDAL POUR WINDOWS
 # =============================================
 if sys.platform == 'win32':
-    # Chemin vers GDAL (adapté à ta version 3.12.1)
     gdal_path = r'C:\Program Files\GDAL'
-    
-    # Ajouter au PATH
     if gdal_path not in os.environ.get('PATH', ''):
         os.environ['PATH'] = gdal_path + ';' + os.environ.get('PATH', '')
-    
-    # Définir les variables d'environnement GDAL
     os.environ['GDAL_DATA'] = os.path.join(gdal_path, 'gdal-data')
     os.environ['PROJ_LIB'] = os.path.join(gdal_path, 'projlib')
-    
-    # Spécifier explicitement les bibliothèques
     GDAL_LIBRARY_PATH = os.path.join(gdal_path, 'gdal.dll')
     GEOS_LIBRARY_PATH = os.path.join(gdal_path, 'geos_c.dll')
-
+else:
+    # Configuration pour Linux (Railway) au cas où les paquets binaires manquent
+    import ctypes
+    from django.core.exceptions import ImproperlyConfigured
+    try:
+        # Tente de trouver GDAL de manière standard sous Linux
+        os.environ['GDAL_DATA'] = '/usr/share/gdal'
+    except Exception:
+        pass
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

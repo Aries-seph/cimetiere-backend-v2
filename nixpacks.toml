@@ -1,5 +1,8 @@
-[phases.setup]
-nixPkgs = ["...", "gdal", "geos", "proj"]
+[providers]
+python = {}
 
-[phases.build]
-cmds = ["...", "echo 'GDAL est installé'"]
+[phases.setup]
+nixPkgs = ["python3", "gdal", "geos", "proj"]
+
+[start]
+cmd = "gunicorn cimetiere.wsgi:application --bind 0.0.0.0:$PORT"
