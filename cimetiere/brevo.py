@@ -1,47 +1,54 @@
 # cimetiere/brevo.py
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
 
 def send_brevo_email(to_email, subject, html_content, text_content=None):
     """
-    Envoie un email via SMTP Brevo
+    Envoie un email via l'API Brevo (pas SMTP)
     """
     try:
-        smtp_host = os.getenv('EMAIL_HOST', 'smtp-relay.brevo.com')
-        smtp_port = int(os.getenv('EMAIL_PORT', 587))
-        smtp_user = os.getenv('EMAIL_HOST_USER')
-        smtp_password = os.getenv('EMAIL_HOST_PASSWORD')
+        api_key = os.getenv('BREVO_API_KEY')
         
-        if not smtp_password:
-            print("❌ EMAIL_HOST_PASSWORD non définie")
+        if not api_key:
+            print("❌ BREVO_API_KEY non définie")
             return False
         
-        # Créer le message
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = os.getenv('DEFAULT_FROM_EMAIL', smtp_user)
-        msg['To'] = to_email
+        # Configuration de l'API
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key['api-key'] = api_key
         
-        # Partie texte
-        if text_content:
-            part1 = MIMEText(text_content, 'plain')
-            msg.attach(part1)
+        # Création du client API
+        api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
+            sib_api_v3_sdk.ApiClient(configuration)
+        )
         
-        # Partie HTML
-        part2 = MIMEText(html_content, 'html')
-        msg.attach(part2)
+        # Construction de l'email
+        sender = {
+            "name": "Cimetière V2",
+            "email": os.getenv('DEFAULT_FROM_EMAIL', 'jeremykounkou@icloud.com')
+        }
         
-        # Envoyer via SMTP
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg)
+        to = [{"email": to_email}]
         
-        print(f"✅ Email envoyé à {to_email}")
+        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+            sender=sender,
+            to=to,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content or html_content
+        )
+        
+        # Envoi via l'API (pas SMTP)
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        print(f"✅ Email envoyé à {to_email} - ID: {api_response.message_id}")
         return True
         
+    except ApiException as e:
+        print(f"❌ Erreur Brevo API: {e}")
+        print(f"   Status: {e.status if hasattr(e, 'status') else 'N/A'}")
+        print(f"   Body: {e.body if hasattr(e, 'body') else 'N/A'}")
+        return False
     except Exception as e:
-        print(f"❌ Erreur SMTP: {e}")
+        print(f"❌ Erreur inattendue: {e}")
         return False
