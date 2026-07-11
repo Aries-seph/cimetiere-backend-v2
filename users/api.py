@@ -40,51 +40,32 @@ def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
     
     return {"success": True, "message": "Compte créé avec succès"}
 
-
 @router.post("/login")
 def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
     """
-    Authentification de l'utilisateur avec envoi du code MFA.
+    Authentification de l'utilisateur avec envoi du code MFA via l'API Brevo.
     """
-    # 1. Authentifier l'utilisateur en utilisant les données du schéma JSON
+    # 1. Authentifier l'utilisateur
     user = authenticate(request, username=data.email, password=data.password)
     if not user:
         return {"success": False, "message": "Identifiants incorrects"}
 
-    # 2. Générer le code MFA (Utilise votre méthode de modèle existante)
+    # 2. Générer le code MFA en base de données
     mfa = MFACode.generate_for(user)
 
-    # 3. Envoyer le code par email via l'API HTTP Brevo
+    # 3. Forcer l'envoi via l'API HTTP Brevo (évite le timeout SMTP)
     email_sent = send_brevo_email(
         to_email=user.email,
-        subject='🔐 Votre code de connexion - Cimetière V2',
+        subject='🔐 Votre code de sécurité - Cimetière V2',
         html_content=f"""
         <!DOCTYPE html>
         <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff; border-radius: 8px; }}
-                .header {{ background: #1A56DB; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-                .code {{ font-size: 36px; font-weight: bold; color: #1A56DB; text-align: center; padding: 20px; background: #f0f4ff; border-radius: 8px; margin: 20px 0; }}
-                .footer {{ margin-top: 20px; font-size: 12px; color: #6B7280; text-align: center; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h2>🔐 Connexion à Cimetière V2</h2>
-                </div>
-                <div style="padding: 20px;">
-                    <p>Bonjour <strong>{user.username}</strong>,</p>
-                    <p>Voici votre code de vérification à usage unique :</p>
-                    <div class="code">{mfa.code}</div>
-                    <p>Ce code expire dans <strong>10 minutes</strong>.</p>
-                </div>
-                <div class="footer">
-                    <p>© 2026 Cimetière V2 - Application de gestion de cimetière</p>
-                </div>
-            </div>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>🔐 Double authentification</h2>
+            <p>Bonjour {user.username},</p>
+            <p>Voici votre code de vérification à usage unique pour vous connecter :</p>
+            <h1 style="color: #1A56DB; letter-spacing: 5px; font-size: 36px;">{mfa.code}</h1>
+            <p>Ce code expire dans 10 minutes.</p>
         </body>
         </html>
         """
@@ -94,8 +75,9 @@ def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
         return {"success": False, "message": "Erreur lors de l'envoi du code. Vérifiez votre email."}
 
     return {"success": True, "mfa_required": True, "message": "Un code a été envoyé à votre adresse email"}
-
 @router.post("/verify-mfa")
+
+
 def verify_mfa_code(request, data: MFAVerifyRequestSchema) -> Dict[str, Any]:
     """Vérification du code MFA."""
     
