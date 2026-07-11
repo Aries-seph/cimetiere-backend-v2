@@ -14,6 +14,7 @@ from datetime import timedelta
 from typing import Dict, Any
 from cimetiere.brevo import send_mfa_code
 from cimetiere.brevo import send_brevo_email
+import httpx
 
 router = Router()
 auth = JWTAuth()
@@ -41,47 +42,20 @@ def register_new_user(request, data: RegisterRequestSchema) -> Dict[str, Any]:
     
     return {"success": True, "message": "Compte créé avec succès"}
 
-
-@router.post("/login")
-def login_user(request, data: LoginRequestSchema) -> Dict[str, Any]:
-    user = authenticate(
-        request,
-        username=data.email,
-        password=data.password
-    )
-    
-    if not user:
-        return {"success": False, "message": "Identifiants incorrects"}
-    
-    mfa = MFACode.generate_for(user)
-    
-    # Utiliser Brevo au lieu de Django SMTP
-    email_sent = send_brevo_email(
-        to_email=user.email,
-        subject='🔐 Votre code de connexion - Cimetière V2',
-        html_content=f"""
-        <h2>🔐 Connexion à Cimetière V2</h2>
-        <p>Bonjour <strong>{user.username}</strong>,</p>
-        <p>Voici votre code de vérification :</p>
-        <div style="font-size: 32px; font-weight: bold; color: #1A56DB; padding: 20px; background: #f0f4ff; border-radius: 8px;">
-            {mfa.code}
-        </div>
-        <p>Ce code expire dans <strong>10 minutes</strong>.</p>
-        <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
-        """
-    )
-    
-    if not email_sent:
+# api_client.py
+def login(self, email, password):
+    try:
+        response = httpx.post(
+            f"{self.base_url}/api/users/login",
+            json={"email": email, "password": password}
+        )
+        # On vérifie si la réponse est bien du JSON
+        return response.json()
+    except Exception as e:
         return {
-            "success": False,
-            "message": "Erreur lors de l'envoi du code. Vérifiez votre email."
+            "success": False, 
+            "message": f"Le serveur a renvoyé une réponse invalide (HTML/Erreur 500)."
         }
-    
-    return {
-        "success": True,
-        "mfa_required": True,
-        "message": "Un code a été envoyé à votre adresse email"
-    }
 
 @router.post("/verify-mfa")
 def verify_mfa_code(request, data: MFAVerifyRequestSchema) -> Dict[str, Any]:
