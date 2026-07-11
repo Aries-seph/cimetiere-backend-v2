@@ -29,5 +29,5 @@ COPY . .
 # Exposer le port
 EXPOSE 8000
 
-# Lancer l'application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "cimetiere.wsgi:application"]
+# Lancer l'application en écoutant sur le port dynamique de Railway
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT cimetiere.wsgi:application"]
