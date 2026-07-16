@@ -22,8 +22,8 @@ def _notify_admins(subject: str, message: str):
     send_mail(
         subject=subject,
         message=message,
-        from_email='mampassisephoragloirdine@gmail.com',
-        recipient_list=['mampassisephoragloirdine@gmail.com'],
+        from_email='jeremykounkou@icloud.com',
+        recipient_list=['jeremykounkou@icloud.com'],
     )
 
 
@@ -34,7 +34,7 @@ def _send_authorization_email(exhumation: Exhumation):
     email = EmailMessage(
         subject="Autorisation d'exhumation",
         body=f"Bonjour {exhumation.demandeur.username},\n\nVotre demande d'exhumation a été approuvée.\nVeuillez trouver ci-joint l'autorisation officielle.",
-        from_email='mampassisephoragloirdine@gmail.com',
+        from_email='jeremykounkou@icloud.com',
         to=[exhumation.demandeur.email],
     )
     email.attach(
@@ -150,7 +150,7 @@ def reject_exhumation(request, exhumation_id: int):
     send_mail(
         subject="Demande d'exhumation refusée",
         message=f"Bonjour {exhumation.demandeur.username},\n\nVotre demande d'exhumation pour le caveau {exhumation.caveau.reference} a été refusée.\n\nPour plus d'informations, contactez l'administration.",
-        from_email='mampassisephoragloirdine@gmail.com',
+        from_email='jeremykounkou@icloud.com',
         to=[exhumation.demandeur.email],
     )
 

@@ -8,6 +8,7 @@ import uuid
 from django.core.mail import EmailMessage
 from finances.pdf import generate_invoice_pdf
 from typing import List, Dict, Any
+from django.db.models import Q
 
 router = Router()
 auth = JWTAuth()
@@ -30,7 +31,7 @@ def _send_invoice_email(paiement: Paiement):
     email = EmailMessage(
         subject='Votre facture de paiement',
         body=f'Bonjour {paiement.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement.reference}.\n\nMerci.',
-        from_email='mampassisephoragloirdine@gmail.com',
+        from_email='jeremykounkou@icloud.com',
         to=[paiement.client.email],
     )
     email.attach(
@@ -85,7 +86,17 @@ def get_all_paiements_admin(request):
     user = request.auth
     if not _is_admin(user):
         return {"success": False, "message": "Accès refusé"}
-    return list(Paiement.objects.all().values())
+    
+    # Récupérer le paramètre de tri
+    sort_by = request.GET.get('sort', '-created_at')
+    
+    # Validation des champs de tri autorisés
+    allowed_sort_fields = ['created_at', '-created_at', 'montant', '-montant', 'statut', '-statut']
+    
+    if sort_by not in allowed_sort_fields:
+        sort_by = '-created_at'
+    
+    return list(Paiement.objects.all().order_by(sort_by).values())
 
 
 @router.post("/validate/{paiement_id}", auth=auth)
