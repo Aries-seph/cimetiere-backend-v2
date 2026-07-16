@@ -147,7 +147,7 @@ def save_selected_location(request, data: dict):
 
 
 # ============ SECTIONS ============
-@router.get("/sections", auth=auth, response=List[Dict[str, Any]])
+@router.get("/section", auth=auth, response=List[Dict[str, Any]])
 def get_sections_list(request):
     """Récupère la liste de toutes les sections."""
     return list(
