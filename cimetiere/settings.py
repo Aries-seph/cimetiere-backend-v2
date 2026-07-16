@@ -170,6 +170,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8551',
     'https://cimetiere-frontend-v2-production.up.railway.app',
     'https://cimetiere-frontend-v2.up.railway.app',
+    'https://cimetiere-backend-v2-production.up.railway.app',  # ← Domaine exact
+    'https://cimetiere-backend-v2.up.railway.app',
 ]
 
 CORS_ALLOW_CREDENTIALS = True
