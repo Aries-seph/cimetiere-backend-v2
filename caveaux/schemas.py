@@ -4,6 +4,7 @@ from ninja import Schema
 from pydantic import field_validator
 
 
+# ============ CAVEAUX ============
 class CaveauCreateSchema(Schema):
     """Schéma pour la création d'un caveau."""
     bloc_id: int
@@ -62,3 +63,32 @@ class CaveauUpdateSchema(Schema):
         if v is not None and not (-180 <= v <= 180):
             raise ValueError("La longitude doit être comprise entre -180 et 180")
         return v
+
+
+# ============ SECTIONS ============
+class SectionCreateSchema(Schema):
+    """Schéma pour la création d'une section."""
+    nom: str
+    description: Optional[str] = None
+
+
+class SectionResponseSchema(Schema):
+    """Schéma de réponse pour une section."""
+    id: int
+    nom: str
+    description: Optional[str] = None
+
+
+# ============ BLOCS ============
+class BlocCreateSchema(Schema):
+    """Schéma pour la création d'un bloc."""
+    section_id: int
+    nom: str
+
+
+class BlocResponseSchema(Schema):
+    """Schéma de réponse pour un bloc."""
+    id: int
+    nom: str
+    section_id: int
+    section_nom: Optional[str] = None
