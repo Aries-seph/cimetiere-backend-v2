@@ -22,38 +22,56 @@ def _is_admin(user) -> bool:
 def create_new_concession(request, data: ConcessionCreateSchema):
     """Crée une nouvelle concession."""
     user = request.auth
+    
+    print("🔵 ===== CREATE CONCESSION =====")
+    print(f"🔵 Utilisateur: {user.email if user else 'inconnu'}")
+    print(f"🔵 Rôle utilisateur: {user.role if user else 'inconnu'}")
+    print(f"🔵 Données reçues: client_id={data.client_id}, caveau_id={data.caveau_id}, type={data.type_concession}, date_debut={data.date_debut}, date_fin={data.date_fin}")
 
     if not _is_admin(user):
+        print("🔴 Accès refusé - rôle insuffisant")
         return {"success": False, "message": "Accès refusé"}
 
     try:
         client = User.objects.get(id=data.client_id)
+        print(f"🔵 Client trouvé: {client.email}")
     except User.DoesNotExist:
+        print(f"🔴 Client introuvable: ID {data.client_id}")
         return {"success": False, "message": "Client introuvable"}
 
     try:
         caveau = Caveau.objects.get(id=data.caveau_id)
+        print(f"🔵 Caveau trouvé: {caveau.reference}")
     except Caveau.DoesNotExist:
+        print(f"🔴 Caveau introuvable: ID {data.caveau_id}")
         return {"success": False, "message": "Caveau introuvable"}
 
     if data.type_concession == "TEMPORAIRE" and not data.date_fin:
+        print("🔴 Erreur: Concession temporaire sans date de fin")
         return {"success": False, "message": "Une concession temporaire nécessite une date de fin"}
 
-    concession = Concession.objects.create(
-        client=client,
-        caveau=caveau,
-        type_concession=data.type_concession,
-        date_debut=data.date_debut,
-        date_fin=data.date_fin
-    )
-
-    return {"success": True, "id": concession.id, "message": "Concession créée"}
+    try:
+        concession = Concession.objects.create(
+            client=client,
+            caveau=caveau,
+            type_concession=data.type_concession,
+            date_debut=data.date_debut,
+            date_fin=data.date_fin
+        )
+        print(f"✅ Concession créée avec l'ID {concession.id}")
+        print("🔵 ===== FIN CREATE CONCESSION =====")
+        return {"success": True, "id": concession.id, "message": "Concession créée"}
+    except Exception as e:
+        print(f"🔴 Erreur lors de la création en base: {e}")
+        print("🔵 ===== FIN CREATE CONCESSION (ERREUR) =====")
+        return {"success": False, "message": f"Erreur base de données: {str(e)}"}
 
 
 @router.get("/", auth=auth, response=List[Dict[str, Any]])
 def get_concessions_list(request):
     """Récupère la liste des concessions."""
     user = request.auth
+    print(f"🔵 GET concessions par {user.email if user else 'inconnu'}")
 
     if _is_admin(user):
         concessions = Concession.objects.all().values()
@@ -67,6 +85,7 @@ def get_concessions_list(request):
 def get_concession_detail(request, concession_id: int):
     """Récupère les détails d'une concession."""
     user = request.auth
+    print(f"🔵 GET concession {concession_id} par {user.email if user else 'inconnu'}")
 
     try:
         if _is_admin(user):
@@ -74,6 +93,7 @@ def get_concession_detail(request, concession_id: int):
         else:
             concession = Concession.objects.get(id=concession_id, client=user)
     except Concession.DoesNotExist:
+        print(f"🔴 Concession {concession_id} introuvable")
         return {"success": False, "message": "Concession introuvable"}
 
     return {
@@ -91,6 +111,7 @@ def get_concession_detail(request, concession_id: int):
 def renew_concession(request, concession_id: int, nouvelle_date_fin: str):
     """Renouvelle une concession temporaire."""
     user = request.auth
+    print(f"🔵 RENOUVELLEMENT concession {concession_id} par {user.email if user else 'inconnu'}")
 
     if not _is_admin(user):
         return {"success": False, "message": "Accès refusé"}
@@ -106,6 +127,8 @@ def renew_concession(request, concession_id: int, nouvelle_date_fin: str):
     concession.date_fin = nouvelle_date_fin
     concession.statut = "ACTIVE"
     concession.save()
+    
+    print(f"✅ Concession {concession_id} renouvelée jusqu'au {nouvelle_date_fin}")
 
     return {"success": True, "message": "Concession renouvelée"}
 
@@ -114,6 +137,7 @@ def renew_concession(request, concession_id: int, nouvelle_date_fin: str):
 def terminate_concession(request, concession_id: int):
     """Résilie une concession."""
     user = request.auth
+    print(f"🔵 RÉSILIATION concession {concession_id} par {user.email if user else 'inconnu'}")
 
     if not _is_admin(user):
         return {"success": False, "message": "Accès refusé"}
@@ -129,6 +153,8 @@ def terminate_concession(request, concession_id: int):
     caveau = concession.caveau
     caveau.statut = "DISPONIBLE"
     caveau.save()
+    
+    print(f"✅ Concession {concession_id} résiliée")
 
     return {"success": True, "message": "Concession résiliée"}
 
@@ -137,6 +163,7 @@ def terminate_concession(request, concession_id: int):
 def get_expired_concessions(request):
     """Récupère la liste des concessions expirées."""
     user = request.auth
+    print(f"🔵 GET concessions expirées par {user.email if user else 'inconnu'}")
 
     if not _is_admin(user):
         return {"success": False, "message": "Accès refusé"}
