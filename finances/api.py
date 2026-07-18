@@ -43,6 +43,7 @@ def _send_invoice_email(paiement: Paiement):
             body=f'Bonjour {paiement.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement.reference}.\n\nMerci.',
             from_email='jeremykounkou@icloud.com',
             to=[paiement.client.email],
+            reply_to=['jeremykounkou@icloud.com'],  # ✅ AJOUTÉ
         )
         
         # Attacher le PDF
