@@ -29,47 +29,36 @@ def _generate_reference() -> str:
 
 
 def _send_invoice_email(paiement: Paiement):
-    """Envoie la facture par email avec gestion d'erreurs."""
+    """Envoie la facture par email avec gestion robuste des erreurs."""
     try:
-        print(f"🔵 Envoi de la facture pour le paiement {paiement.reference}")
-        print(f"🔵 Destinataire: {paiement.client.email}")
+        # Forcer le rafraîchissement depuis la BDD avec les relations nécessaires
+        paiement_complet = Paiement.objects.select_related(
+            'client', 
+            'reservation', 
+            'reservation__caveau'
+        ).get(id=paiement.id)
         
-        # Générer le PDF
-        pdf_buffer = generate_invoice_pdf(paiement)
-        print(f"🔵 PDF généré avec succès")
+        pdf_buffer = generate_invoice_pdf(paiement_complet)
         
-        # Créer l'email
         email = EmailMessage(
             subject='Votre facture de paiement',
-            body=f'Bonjour {paiement.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement.reference}.\n\nMerci.',
+            body=f'Bonjour {paiement_complet.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement_complet.reference}.\n\nMerci.',
             from_email='jeremykounkou@icloud.com',
-            to=[paiement.client.email],
-            reply_to=['jeremykounkou@icloud.com'],
+            to=[paiement_complet.client.email],
         )
         
-        # Attacher le PDF
         email.attach(
-            f'facture_{paiement.reference}.pdf',
+            f'facture_{paiement_complet.reference}.pdf',
             pdf_buffer.read(),
             'application/pdf'
         )
-        
-        # Envoyer l'email
         email.send()
-        print(f"✅ Email envoyé avec succès à {paiement.client.email}")
+        logger.info(f"Email de facture envoyé avec succès pour le paiement {paiement_complet.reference}")
         
     except Exception as e:
-        print(f"🔴 Erreur lors de l'envoi de l'email: {e}")
-
-
-def _send_invoice_email_async(paiement_id: int):
-    """Envoie la facture en arrière-plan dans un thread séparé."""
-    from finances.models import Paiement
-    try:
-        paiement = Paiement.objects.get(id=paiement_id)
-        _send_invoice_email(paiement)
-    except Exception as e:
-        print(f"🔴 Erreur dans le thread d'envoi d'email: {e}")
+        logger.error(f"Erreur lors de l'envoi de l'email de facture pour le paiement {paiement.id}: {str(e)}")
+        # Optionnel: lever l'exception ou la laisser silencieuse pour ne pas bloquer la réponse API
+        raise e
 
 
 @router.post("/", auth=auth)
@@ -126,37 +115,30 @@ def get_all_paiements_admin(request):
     return list(Paiement.objects.all().order_by(sort_by).values())
 
 
+
 @router.post("/validate/{paiement_id}", auth=auth)
 def validate_paiement_request(request, paiement_id: int):
     """Valide un paiement."""
     user = request.auth
-    print(f"🔵 Validation du paiement {paiement_id} par {user.email}")
-    
     if not _is_admin(user):
-        print("🔴 Accès refusé - rôle insuffisant")
         return {"success": False, "message": "Accès refusé"}
 
     try:
         paiement = Paiement.objects.get(id=paiement_id)
-        print(f"🔵 Paiement trouvé: {paiement.reference}")
     except Paiement.DoesNotExist:
-        print(f"🔴 Paiement {paiement_id} introuvable")
         return {"success": False, "message": "Paiement introuvable"}
 
     paiement.statut = "VALIDE"
     paiement.save()
-    print(f"✅ Paiement {paiement.reference} validé en base")
 
-    # ✅ Envoyer la facture en arrière-plan avec un thread
     try:
-        thread = threading.Thread(target=_send_invoice_email_async, args=(paiement.id,))
-        thread.daemon = True
-        thread.start()
-        print(f"✅ Thread d'envoi d'email démarré pour {paiement.client.email}")
-    except Exception as e:
-        print(f"🔴 Erreur lors du démarrage du thread: {e}")
-
-    return {"success": True, "message": "Paiement validé"}
+        _send_invoice_email(paiement)
+        return {"success": True, "message": "Paiement validé et facture envoyée"}
+    except Exception as mail_err:
+        return {
+            "success": True, 
+            "message": f"Paiement validé, mais la facture n'a pas pu être envoyée par mail : {str(mail_err)}"
+        }
 
 
 @router.post("/reject/{paiement_id}", auth=auth)

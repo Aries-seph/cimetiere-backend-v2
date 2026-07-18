@@ -6,7 +6,6 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
 import io
 
-
 def generate_invoice_pdf(paiement):
     """Génère un PDF de facture pour un paiement."""
     buffer = io.BytesIO()
@@ -18,28 +17,49 @@ def generate_invoice_pdf(paiement):
     elements.append(Paragraph("FACTURE DE PAIEMENT", styles['Title']))
     elements.append(Spacer(1, 0.5 * cm))
 
+    # Gestion sécurisée de la date
+    date_str = "-"
+    if paiement.created_at:
+        try:
+            date_str = paiement.created_at.strftime('%d/%m/%Y %H:%M')
+        except AttributeError:
+            date_str = str(paiement.created_at)
+
     # Infos facture
-    elements.append(Paragraph(f"Référence : {paiement.reference}", styles['Normal']))
-    elements.append(Paragraph(f"Date : {paiement.created_at.strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Référence :</b> {paiement.reference}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Date :</b> {date_str}", styles['Normal']))
     elements.append(Spacer(1, 0.5 * cm))
 
     # Infos client
     elements.append(Paragraph("INFORMATIONS CLIENT", styles['Heading2']))
-    elements.append(Paragraph(f"Nom : {paiement.client.username}", styles['Normal']))
-    elements.append(Paragraph(f"Email : {paiement.client.email}", styles['Normal']))
+    elements.append(Paragraph(f"Nom : {paiement.client.username if paiement.client else '-'}", styles['Normal']))
+    elements.append(Paragraph(f"Email : {paiement.client.email if paiement.client else '-'}", styles['Normal']))
     elements.append(Spacer(1, 0.5 * cm))
 
     # Infos réservation
     elements.append(Paragraph("DÉTAILS RÉSERVATION", styles['Heading2']))
-    elements.append(Paragraph(f"Caveau : {paiement.reservation.caveau.reference}", styles['Normal']))
-    elements.append(Paragraph(f"Défunt : {paiement.reservation.nom_defunt}", styles['Normal']))
+    caveau_ref = "-"
+    nom_defunt = "-"
+    if paiement.reservation:
+        nom_defunt = paiement.reservation.nom_defunt
+        if paiement.reservation.caveau:
+            caveau_ref = paiement.reservation.caveau.reference
+
+    elements.append(Paragraph(f"Caveau : {caveau_ref}", styles['Normal']))
+    elements.append(Paragraph(f"Défunt : {nom_defunt}", styles['Normal']))
     elements.append(Spacer(1, 0.5 * cm))
+
+    # Résolution sécurisée du canal d'achat
+    try:
+        canal_str = paiement.get_canal_display()
+    except AttributeError:
+        canal_str = getattr(paiement, 'canal', '-')
 
     # Tableau paiement
     elements.append(Paragraph("DÉTAILS PAIEMENT", styles['Heading2']))
     data = [
         ["Description", "Canal", "Montant"],
-        ["Paiement caveau", paiement.get_canal_display(), f"{paiement.montant} FCFA"],
+        ["Paiement caveau", canal_str, f"{paiement.montant} FCFA"],
     ]
 
     table = Table(data, colWidths=[7 * cm, 5 * cm, 4 * cm])
