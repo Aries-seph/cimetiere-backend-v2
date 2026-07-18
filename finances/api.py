@@ -10,6 +10,7 @@ from finances.pdf import generate_invoice_pdf
 from typing import List, Dict, Any
 from django.db.models import Q
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def _send_invoice_email(paiement: Paiement):
             body=f'Bonjour {paiement.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement.reference}.\n\nMerci.',
             from_email='jeremykounkou@icloud.com',
             to=[paiement.client.email],
-            reply_to=['jeremykounkou@icloud.com'],  # ✅ AJOUTÉ
+            reply_to=['jeremykounkou@icloud.com'],
         )
         
         # Attacher le PDF
@@ -59,7 +60,16 @@ def _send_invoice_email(paiement: Paiement):
         
     except Exception as e:
         print(f"🔴 Erreur lors de l'envoi de l'email: {e}")
-        # Ne pas lever d'exception pour ne pas bloquer la validation du paiement
+
+
+def _send_invoice_email_async(paiement_id: int):
+    """Envoie la facture en arrière-plan dans un thread séparé."""
+    from finances.models import Paiement
+    try:
+        paiement = Paiement.objects.get(id=paiement_id)
+        _send_invoice_email(paiement)
+    except Exception as e:
+        print(f"🔴 Erreur dans le thread d'envoi d'email: {e}")
 
 
 @router.post("/", auth=auth)
@@ -107,10 +117,7 @@ def get_all_paiements_admin(request):
     if not _is_admin(user):
         return {"success": False, "message": "Accès refusé"}
     
-    # Récupérer le paramètre de tri
     sort_by = request.GET.get('sort', '-created_at')
-    
-    # Validation des champs de tri autorisés
     allowed_sort_fields = ['created_at', '-created_at', 'montant', '-montant', 'statut', '-statut']
     
     if sort_by not in allowed_sort_fields:
@@ -140,15 +147,16 @@ def validate_paiement_request(request, paiement_id: int):
     paiement.save()
     print(f"✅ Paiement {paiement.reference} validé en base")
 
-    # Envoyer la facture par email
+    # ✅ Envoyer la facture en arrière-plan avec un thread
     try:
-        _send_invoice_email(paiement)
-        print(f"✅ Email envoyé à {paiement.client.email}")
+        thread = threading.Thread(target=_send_invoice_email_async, args=(paiement.id,))
+        thread.daemon = True
+        thread.start()
+        print(f"✅ Thread d'envoi d'email démarré pour {paiement.client.email}")
     except Exception as e:
-        print(f"🔴 Erreur lors de l'envoi de l'email: {e}")
-        # On continue même si l'email échoue
+        print(f"🔴 Erreur lors du démarrage du thread: {e}")
 
-    return {"success": True, "message": "Paiement validé et facture envoyée"}
+    return {"success": True, "message": "Paiement validé"}
 
 
 @router.post("/reject/{paiement_id}", auth=auth)
