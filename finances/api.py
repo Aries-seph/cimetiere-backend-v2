@@ -9,6 +9,9 @@ from django.core.mail import EmailMessage
 from finances.pdf import generate_invoice_pdf
 from typing import List, Dict, Any
 from django.db.models import Q
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 auth = JWTAuth()
@@ -25,21 +28,37 @@ def _generate_reference() -> str:
 
 
 def _send_invoice_email(paiement: Paiement):
-    """Envoie la facture par email."""
-    pdf_buffer = generate_invoice_pdf(paiement)
-    
-    email = EmailMessage(
-        subject='Votre facture de paiement',
-        body=f'Bonjour {paiement.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement.reference}.\n\nMerci.',
-        from_email='jeremykounkou@icloud.com',
-        to=[paiement.client.email],
-    )
-    email.attach(
-        f'facture_{paiement.reference}.pdf',
-        pdf_buffer.read(),
-        'application/pdf'
-    )
-    email.send()
+    """Envoie la facture par email avec gestion d'erreurs."""
+    try:
+        print(f"🔵 Envoi de la facture pour le paiement {paiement.reference}")
+        print(f"🔵 Destinataire: {paiement.client.email}")
+        
+        # Générer le PDF
+        pdf_buffer = generate_invoice_pdf(paiement)
+        print(f"🔵 PDF généré avec succès")
+        
+        # Créer l'email
+        email = EmailMessage(
+            subject='Votre facture de paiement',
+            body=f'Bonjour {paiement.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement.reference}.\n\nMerci.',
+            from_email='jeremykounkou@icloud.com',
+            to=[paiement.client.email],
+        )
+        
+        # Attacher le PDF
+        email.attach(
+            f'facture_{paiement.reference}.pdf',
+            pdf_buffer.read(),
+            'application/pdf'
+        )
+        
+        # Envoyer l'email
+        email.send()
+        print(f"✅ Email envoyé avec succès à {paiement.client.email}")
+        
+    except Exception as e:
+        print(f"🔴 Erreur lors de l'envoi de l'email: {e}")
+        # Ne pas lever d'exception pour ne pas bloquer la validation du paiement
 
 
 @router.post("/", auth=auth)
@@ -103,18 +122,30 @@ def get_all_paiements_admin(request):
 def validate_paiement_request(request, paiement_id: int):
     """Valide un paiement."""
     user = request.auth
+    print(f"🔵 Validation du paiement {paiement_id} par {user.email}")
+    
     if not _is_admin(user):
+        print("🔴 Accès refusé - rôle insuffisant")
         return {"success": False, "message": "Accès refusé"}
 
     try:
         paiement = Paiement.objects.get(id=paiement_id)
+        print(f"🔵 Paiement trouvé: {paiement.reference}")
     except Paiement.DoesNotExist:
+        print(f"🔴 Paiement {paiement_id} introuvable")
         return {"success": False, "message": "Paiement introuvable"}
 
     paiement.statut = "VALIDE"
     paiement.save()
+    print(f"✅ Paiement {paiement.reference} validé en base")
 
-    _send_invoice_email(paiement)
+    # Envoyer la facture par email
+    try:
+        _send_invoice_email(paiement)
+        print(f"✅ Email envoyé à {paiement.client.email}")
+    except Exception as e:
+        print(f"🔴 Erreur lors de l'envoi de l'email: {e}")
+        # On continue même si l'email échoue
 
     return {"success": True, "message": "Paiement validé et facture envoyée"}
 
