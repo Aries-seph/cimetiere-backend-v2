@@ -11,6 +11,7 @@ from typing import List, Dict, Any
 from django.db.models import Q
 import logging
 import threading
+from django.conf import settings  
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +29,11 @@ def _generate_reference() -> str:
     return f"PAY-{uuid.uuid4().hex[:8].upper()}"
 
 
+
 def _send_invoice_email(paiement: Paiement):
-    """Envoie la facture par email avec gestion robuste des erreurs."""
+    """Envoie la facture par email avec expéditeur dynamique et logs stricts."""
     try:
-        # Forcer le rafraîchissement depuis la BDD avec les relations nécessaires
+        # Rechargement de l'objet complet
         paiement_complet = Paiement.objects.select_related(
             'client', 
             'reservation', 
@@ -40,10 +42,13 @@ def _send_invoice_email(paiement: Paiement):
         
         pdf_buffer = generate_invoice_pdf(paiement_complet)
         
+        # Utiliser l'adresse configurée dans les settings du serveur
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@votredomaine.com')
+        
         email = EmailMessage(
             subject='Votre facture de paiement',
             body=f'Bonjour {paiement_complet.client.username},\n\nVeuillez trouver ci-joint votre facture pour le paiement {paiement_complet.reference}.\n\nMerci.',
-            from_email='jeremykounkou@icloud.com',
+            from_email=from_email,
             to=[paiement_complet.client.email],
         )
         
@@ -52,12 +57,13 @@ def _send_invoice_email(paiement: Paiement):
             pdf_buffer.read(),
             'application/pdf'
         )
-        email.send()
-        logger.info(f"Email de facture envoyé avec succès pour le paiement {paiement_complet.reference}")
+        
+        # fail_silently=False force Django à lever une vraie erreur si le serveur SMTP refuse
+        email.send(fail_silently=False)
+        logger.info(f"Email envoyé avec succès à {paiement_complet.client.email}")
         
     except Exception as e:
-        logger.error(f"Erreur lors de l'envoi de l'email de facture pour le paiement {paiement.id}: {str(e)}")
-        # Optionnel: lever l'exception ou la laisser silencieuse pour ne pas bloquer la réponse API
+        logger.error(f"CRASH ENVOI EMAIL: {str(e)}", exc_info=True)
         raise e
 
 
