@@ -34,7 +34,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_q',
     'django.contrib.gis',  # Important pour PostGIS
     'rest_framework',
     'corsheaders',
@@ -94,16 +93,6 @@ DATABASES = {
             'sslmode': os.getenv('DB_SSLMODE', 'require'),
         }
     }
-}
-
-Q_CLUSTER = {
-    'name': 'cimetiere_tasks',
-    'workers': 2,          # Nombre de processus en parallèle
-    'timeout': 60,         # Kill la tâche si elle dépasse 60s
-    'retry': 120,          # Relance la tâche si elle échoue
-    'queue_limit': 50,
-    'bulk': 10,
-    'orm': 'default',      # Utilise ta base de données pour stocker la file d'attente
 }
 
 # Password validation
