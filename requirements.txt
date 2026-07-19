@@ -73,3 +73,4 @@ watchfiles==1.2.0
 wcwidth==0.8.2
 websockets==16.0
 whitenoise==6.12.0
+setuptools
