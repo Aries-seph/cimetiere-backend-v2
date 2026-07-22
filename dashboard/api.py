@@ -147,7 +147,6 @@ def export_excel_report(request):
         return {"success": False, "message": "Accès refusé"}
 
     wb = openpyxl.Workbook()
-
     ws1 = wb.active
     ws1.title = "Caveaux"
     ws1.append(['Référence', 'Bloc', 'Section', 'Statut', 'Longueur', 'Largeur'])
@@ -160,7 +159,6 @@ def export_excel_report(request):
             caveau.longueur,
             caveau.largeur,
         ])
-
     ws2 = wb.create_sheet("Paiements")
     ws2.append(['Référence', 'Client', 'Montant', 'Canal', 'Statut', 'Date'])
     for p in Paiement.objects.select_related('client').all():
@@ -172,7 +170,6 @@ def export_excel_report(request):
             p.statut,
             p.created_at.strftime('%d/%m/%Y %H:%M'),
         ])
-
     ws3 = wb.create_sheet("Réservations")
     ws3.append(['Client', 'Caveau', 'Défunt', 'Statut', 'Date'])
     for r in Reservation.objects.select_related('client', 'caveau').all():
@@ -183,7 +180,6 @@ def export_excel_report(request):
             r.statut,
             r.created_at.strftime('%d/%m/%Y %H:%M'),
         ])
-
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
