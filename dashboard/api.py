@@ -1,6 +1,6 @@
 # dashboard/api.py
 from ninja import Router
-from users.auth import JWTAuth
+from users.auth import JWTAuth,JWTAuthQueryParam
 from caveaux.models import Caveau, Bloc
 from reservations.models import Reservation
 from finances.models import Paiement
@@ -107,9 +107,8 @@ def get_revenues_by_channel(request):
 
     return list(revenus)
 
-# dashboard/api.py (extrait - garder les endpoints existants)
 
-@router.get("/export-csv", auth=auth)
+@router.get("/export-csv", auth=JWTAuthQueryParam())
 def export_csv_report(request):
     """Exporte les données en CSV."""
     user = request.auth
@@ -138,7 +137,7 @@ def export_csv_report(request):
     return response
 
 
-@router.get("/export-excel", auth=auth)
+@router.get("/export-excel", auth=JWTAuthQueryParam())
 def export_excel_report(request):
     """Exporte les données en Excel."""
     user = request.auth
